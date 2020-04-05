@@ -29,6 +29,8 @@ func (h *httpRequestHandler) Do() *httpResponseHandler{
 	for _, p:= range h.crawlData.Params{
 		qs.Set(p, h.attack)
 	}
+
+	h.crawlData.URL.RawQuery = qs.Encode()
 }
 
 	req, _ := http.NewRequest(h.crawlData.Method, h.crawlData.URL.String(), nil)

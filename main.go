@@ -15,7 +15,7 @@ func main() {
 	startingGs := runtime.NumGoroutine()
 	go http.ListenAndServe("localhost:6060", nil)
 
-	ca.NewManager("https://detectify.com/", "detectify.com").CrawlAndAttack()
+	ca.NewManager("http://php.testsparker.com/process.php?file=Generics/index.nsp", "php.testsparker.com").CrawlAndAttack()
 	endingGs := runtime.NumGoroutine()
 
 	fmt.Println("Number of goroutines before:", startingGs)
