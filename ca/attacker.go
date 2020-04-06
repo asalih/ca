@@ -97,13 +97,18 @@ func (attacker *Attacker) attack() {
 	wg.Wait()
 }
 
-func (attacker *Attacker) readScriptFiles() {
-	files, _ := ioutil.ReadDir("./scripts/")
+func (attacker *Attacker) readScriptFiles(subDir string) {
+	var srcDir = "./scripts/" + subDir
+	files, _ := ioutil.ReadDir(srcDir)
 	for _, v := range files {
-		if v.IsDir() || !strings.HasSuffix(v.Name(), ".js") {
+		if v.IsDir() {
+			attacker.readScriptFiles(v.Name() + "/")
+		}
+
+		if !strings.HasSuffix(v.Name(), ".js") {
 			continue
 		}
-		program, err := parser.ParseFile(nil, "./scripts/"+v.Name(), nil, 0)
+		program, err := parser.ParseFile(nil, srcDir+v.Name(), nil, 0)
 
 		if err != nil {
 			fmt.Println("Proglem with the file:")
@@ -119,7 +124,7 @@ func (attacker *Attacker) Start(wg *sync.WaitGroup) {
 	attacker.tickerChannel = make(chan bool)
 	attacker.refWg = wg
 
-	attacker.readScriptFiles()
+	attacker.readScriptFiles("")
 
 	go func() {
 		for {

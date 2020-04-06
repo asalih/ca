@@ -24,14 +24,18 @@ func (h *httpRequestHandler) Do() *httpResponseHandler{
 		Timeout: time.Second * 45,
 	}
 
-	if h.attack != ""{
-	qs := h.crawlData.URL.Query()
-	for _, p:= range h.crawlData.Params{
-		qs.Set(p, h.attack)
-	}
+	if h.attack != "" && h.crawlData.Method == "GET"{
+		var qs string
+		for _, p:= range h.crawlData.Params{
+			if qs != ""{
+				qs += "&"
+			}
 
-	h.crawlData.URL.RawQuery = qs.Encode()
-}
+			qs += p + "=" + h.attack
+		}
+
+		h.crawlData.URL.RawQuery = qs
+	}
 
 	req, _ := http.NewRequest(h.crawlData.Method, h.crawlData.URL.String(), nil)
 
