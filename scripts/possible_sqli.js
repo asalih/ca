@@ -9,8 +9,6 @@ var attacks = [
     if (response.Body.indexOf('iNj3Ct3D') > -1) {
       console.log("Possible SQL Injection in " + response.URL)
 
-      return true
+      return Found(HIGH, "Possible SQL Injection")
     }
-
-    return false
   }

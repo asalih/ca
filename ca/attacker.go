@@ -13,15 +13,24 @@ import (
 )
 
 type Attacker struct {
-	Reader        func() *CrawlData
-	ticker        *time.Ticker
-	tickerChannel chan bool
-	refWg         *sync.WaitGroup
-	scripts       []*ast.Program
+	Reader               func() *CrawlData
+	ticker               *time.Ticker
+	tickerChannel        chan bool
+	refWg                *sync.WaitGroup
+	scripts              []*ast.Program
+	FoundVulnerabilities []*Vulnerability
 }
 
+var template string = `
+	var BEST_PRACTICE = 0, INFORMATION = 1, LOW = 2, MEDIUM = 3, HIGH = 4, CRITICAL = 5;
+
+	function Found(severity, title, additionalInfo){
+		return {Title: title, Severity: severity, AdditionalInfo: additionalInfo}
+	}
+`
+
 func NewAttacker() *Attacker {
-	return &Attacker{nil, nil, nil, nil, nil}
+	return &Attacker{nil, nil, nil, nil, nil, nil}
 }
 
 func (attacker *Attacker) attack() {
@@ -47,19 +56,11 @@ func (attacker *Attacker) attack() {
 		go func(scr *ast.Program, crwl *CrawlData, wg *sync.WaitGroup) {
 			defer wg.Done()
 			vm := otto.New()
-			vf1, vf1err := vm.Run(scr)
 
-			if vf1err != nil {
-				fmt.Println(vf1err)
-				fmt.Println(vf1)
-			}
+			vm.Run(template)
+			vm.Run(scr)
 
-			attacks, erra := vm.Get("attacks")
-
-			if erra != nil {
-
-				fmt.Println(erra)
-			}
+			attacks, _ := vm.Get("attacks")
 
 			attackHandler := func(attackStr string) {
 				handler := &httpRequestHandler{crwl, attackStr}
@@ -72,11 +73,19 @@ func (attacker *Attacker) attack() {
 					fmt.Println(anerr)
 				}
 
-				_, berr := analyzer.ToBoolean()
+				analyzeResult, _ := analyzer.Export()
 
-				if berr != nil {
-					fmt.Println(berr)
+				if analyzeResult == nil {
+					return
 				}
+
+				vulnerabilityData := NewVulnerability(analyzeResult.(map[string]interface{}), crawlData)
+
+				if vulnerabilityData == nil {
+					return
+				}
+
+				attacker.FoundVulnerabilities = append(attacker.FoundVulnerabilities, vulnerabilityData)
 			}
 
 			attacksList, _ := attacks.Export()

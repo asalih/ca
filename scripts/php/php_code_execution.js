@@ -7,10 +7,6 @@ var attacks = [
   function analyze(response) {
 
     if (response.Body.indexOf('26839803621') > -1) {
-      console.log("Code Evaluation (PHP) in " + response.URL)
-
-      return true
+      return Found(CRITICAL, "Code Evaluation (PHP)")
     }
-
-    return false
   }

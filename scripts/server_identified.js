@@ -1,9 +1,7 @@
-  function analyze(response) {
+
+function analyze(response) {
     
     if (response.Headers["Server"] != "undefined") {
-        console.log("Server Identified: " + response.Headers["Server"] + " in " + response.URL)
-      return true
+      return Found(INFORMATION, "Server Identified", {"Server": response.Headers["Server"]})
     }
-
-    return false
   }
