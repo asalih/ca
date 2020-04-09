@@ -14,6 +14,7 @@ import (
 
 type Attacker struct {
 	Reader               func() *CrawlData
+	finished             bool
 	ticker               *time.Ticker
 	tickerChannel        chan bool
 	refWg                *sync.WaitGroup
@@ -22,15 +23,16 @@ type Attacker struct {
 }
 
 var template string = `
+	var severities = ["Best Practice", "Information", "Low", "Medium", "High", "Critical"]
 	var BEST_PRACTICE = 0, INFORMATION = 1, LOW = 2, MEDIUM = 3, HIGH = 4, CRITICAL = 5;
 
-	function Found(severity, title, additionalInfo){
-		return {Title: title, Severity: severity, AdditionalInfo: additionalInfo}
+	function Found(severity, title, additionalData){
+		return {Title: title, Severity: severities[severity], AdditionalData: additionalData}
 	}
 `
 
 func NewAttacker() *Attacker {
-	return &Attacker{nil, nil, nil, nil, nil, nil}
+	return &Attacker{nil, false, nil, nil, nil, nil, nil}
 }
 
 func (attacker *Attacker) attack() {
@@ -154,4 +156,5 @@ func (attacker *Attacker) Finalize() {
 
 	attacker.attack()
 	attacker.refWg.Done()
+	attacker.finished = true
 }

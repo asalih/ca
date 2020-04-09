@@ -10,12 +10,13 @@ type Crawler struct {
 	url           string
 	domain        string
 	crawlHandler  *colly.Collector
+	finished      bool
 	OnRequest     func(*CrawlData)
 	OnCrawlFinish func()
 }
 
 func NewCrawler(url string, domain string) *Crawler {
-	return &Crawler{url, domain, nil, nil, nil}
+	return &Crawler{url, domain, nil, false, nil, nil}
 }
 
 func (crawler *Crawler) Init() {
@@ -52,4 +53,5 @@ func (crawler *Crawler) Start(wg *sync.WaitGroup) {
 	crawler.crawlHandler.Visit(crawler.url)
 	crawler.crawlHandler.Wait()
 	crawler.OnCrawlFinish()
+	crawler.finished = true
 }

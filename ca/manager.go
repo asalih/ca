@@ -2,6 +2,7 @@ package ca
 
 import (
 	"container/list"
+	"net/url"
 	"sync"
 )
 
@@ -12,8 +13,10 @@ type Manager struct {
 	mutex    sync.Mutex
 }
 
-func NewManager(url string, domain string) *Manager {
-	return &Manager{NewCrawler(url, domain), NewAttacker(), list.New(), sync.Mutex{}}
+func NewManager(uriStr string) *Manager {
+	uriParsed, _ := url.Parse(uriStr)
+
+	return &Manager{NewCrawler(uriParsed.String(), uriParsed.Host), NewAttacker(), list.New(), sync.Mutex{}}
 }
 
 func (m *Manager) CrawlAndAttack() {
@@ -55,4 +58,8 @@ func (m *Manager) CrawlAndAttack() {
 	go m.Attacker.Start(&wg)
 
 	wg.Wait()
+}
+
+func (m *Manager) IsFinished() bool {
+	return m.Crawler.finished && m.Attacker.finished
 }
