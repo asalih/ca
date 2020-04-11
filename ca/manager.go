@@ -16,7 +16,8 @@ type Manager struct {
 func NewManager(uriStr string) *Manager {
 	uriParsed, _ := url.Parse(uriStr)
 
-	return &Manager{NewCrawler(uriParsed.String(), uriParsed.Host), NewAttacker(), list.New(), sync.Mutex{}}
+	scriptsManager := NewScriptsManager("./scripts/")
+	return &Manager{NewCrawler(uriParsed.String(), uriParsed.Host, scriptsManager), NewAttacker(scriptsManager), list.New(), sync.Mutex{}}
 }
 
 func (m *Manager) CrawlAndAttack() {

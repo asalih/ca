@@ -2,23 +2,20 @@ package ca
 
 import (
 	"fmt"
-	"io/ioutil"
-	"strings"
 	"sync"
 	"time"
 
 	"github.com/robertkrimen/otto"
 	"github.com/robertkrimen/otto/ast"
-	"github.com/robertkrimen/otto/parser"
 )
 
 type Attacker struct {
 	Reader               func() *CrawlData
+	ScriptsManager       *ScriptsManager
 	finished             bool
 	ticker               *time.Ticker
 	tickerChannel        chan bool
 	refWg                *sync.WaitGroup
-	scripts              []*ast.Program
 	FoundVulnerabilities []*Vulnerability
 }
 
@@ -31,8 +28,8 @@ var template string = `
 	}
 `
 
-func NewAttacker() *Attacker {
-	return &Attacker{nil, false, nil, nil, nil, nil, nil}
+func NewAttacker(scriptsManager *ScriptsManager) *Attacker {
+	return &Attacker{nil, scriptsManager, false, nil, nil, nil, nil}
 }
 
 func (attacker *Attacker) attack() {
@@ -52,9 +49,9 @@ func (attacker *Attacker) attack() {
 	fmt.Println("Attacking " + crawlData.URL.RequestURI())
 
 	var wg sync.WaitGroup
-	wg.Add(len(attacker.scripts))
+	wg.Add(len(attacker.ScriptsManager.ActiveScripts))
 
-	for _, p := range attacker.scripts {
+	for _, p := range attacker.ScriptsManager.ActiveScripts {
 		go func(scr *ast.Program, crwl *CrawlData, wg *sync.WaitGroup) {
 			defer wg.Done()
 			vm := otto.New()
@@ -108,34 +105,10 @@ func (attacker *Attacker) attack() {
 	wg.Wait()
 }
 
-func (attacker *Attacker) readScriptFiles(subDir string) {
-	var srcDir = "./scripts/" + subDir
-	files, _ := ioutil.ReadDir(srcDir)
-	for _, v := range files {
-		if v.IsDir() {
-			attacker.readScriptFiles(v.Name() + "/")
-		}
-
-		if !strings.HasSuffix(v.Name(), ".js") {
-			continue
-		}
-		program, err := parser.ParseFile(nil, srcDir+v.Name(), nil, 0)
-
-		if err != nil {
-			fmt.Println("Proglem with the file:")
-			fmt.Println(err)
-		}
-
-		attacker.scripts = append(attacker.scripts, program)
-	}
-}
-
 func (attacker *Attacker) Start(wg *sync.WaitGroup) {
 	attacker.ticker = time.NewTicker(500 * time.Millisecond)
 	attacker.tickerChannel = make(chan bool)
 	attacker.refWg = wg
-
-	attacker.readScriptFiles("")
 
 	go func() {
 		for {

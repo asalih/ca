@@ -9,25 +9,27 @@ import (
 
 type httpRequestHandler struct {
 	crawlData *CrawlData
-	attack string
+	attack    string
 }
 
-type httpResponseHandler struct{
-	URL string
-	Headers map[string]string
-	Body string
-	Cookies []*http.Cookie
+type httpResponseHandler struct {
+	URL        string
+	StatusCode int
+	Method     string
+	Headers    map[string]string
+	Body       string
+	Cookies    []*http.Cookie
 }
 
-func (h *httpRequestHandler) Do() *httpResponseHandler{
+func (h *httpRequestHandler) Do() *httpResponseHandler {
 	client := &http.Client{
 		Timeout: time.Second * 45,
 	}
 
-	if h.attack != "" && h.crawlData.Method == "GET"{
+	if h.attack != "" && h.crawlData.Method == "GET" {
 		var qs string
-		for _, p:= range h.crawlData.Params{
-			if qs != ""{
+		for _, p := range h.crawlData.Params {
+			if qs != "" {
 				qs += "&"
 			}
 
@@ -42,18 +44,18 @@ func (h *httpRequestHandler) Do() *httpResponseHandler{
 	resp, _ := client.Do(req)
 
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
-    if err != nil {
-        fmt.Println(err)
-    }
-    bodyString := string(bodyBytes)
+	if err != nil {
+		fmt.Println(err)
+	}
+	bodyString := string(bodyBytes)
 
-	respMap := &httpResponseHandler{resp.Request.URL.String(), h.HeadersToString(resp.Header), bodyString, resp.Cookies()}
+	respMap := &httpResponseHandler{resp.Request.URL.String(), resp.StatusCode, req.Method, h.HeadersToString(resp.Header), bodyString, resp.Cookies()}
 
 	return respMap
 }
 
 //HeadersToString ...
-func (h *httpRequestHandler) HeadersToString(header http.Header) (map[string]string) {
+func (h *httpRequestHandler) HeadersToString(header http.Header) map[string]string {
 	headers := make(map[string]string)
 
 	for name, values := range header {

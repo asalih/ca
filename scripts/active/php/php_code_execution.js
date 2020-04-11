@@ -1,6 +1,6 @@
 var attacks = [
     {
-      attack: '+print(int)0xFFF9999-11205;//',
+      attack: '%2bprint(int)0xFFF9999-11205%3b%2f%2f',
     }
   ];
   
