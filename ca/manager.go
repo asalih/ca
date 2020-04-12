@@ -6,6 +6,7 @@ import (
 	"sync"
 )
 
+//Manager General manager for crawl&attack process
 type Manager struct {
 	Crawler  *Crawler
 	Attacker *Attacker
@@ -13,6 +14,7 @@ type Manager struct {
 	mutex    sync.Mutex
 }
 
+//NewManager Manager initator
 func NewManager(uriStr string) *Manager {
 	uriParsed, _ := url.Parse(uriStr)
 
@@ -20,21 +22,23 @@ func NewManager(uriStr string) *Manager {
 	return &Manager{NewCrawler(uriParsed.String(), uriParsed.Host, scriptsManager), NewAttacker(scriptsManager), list.New(), sync.Mutex{}}
 }
 
+//CrawlAndAttack Starts crawl and attack process
 func (m *Manager) CrawlAndAttack() {
-	m.Crawler.Init()
 
-	m.Crawler.OnRequest = func(c *CrawlData) {
+	m.Crawler.OnRequest = func(c ...*crawlData) {
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 
-		m.queue.PushBack(c)
+		for _, i := range c {
+			m.queue.PushBack(i)
+		}
 	}
 
 	m.Crawler.OnCrawlFinish = func() {
 		m.Attacker.Finalize()
 	}
 
-	m.Attacker.Reader = func() *CrawlData {
+	m.Attacker.CrawlDataReader = func() *crawlData {
 		m.mutex.Lock()
 		defer m.mutex.Unlock()
 
@@ -49,7 +53,7 @@ func (m *Manager) CrawlAndAttack() {
 			return nil
 		}
 
-		return e.Value.(*CrawlData)
+		return e.Value.(*crawlData)
 	}
 
 	var wg sync.WaitGroup
@@ -61,6 +65,7 @@ func (m *Manager) CrawlAndAttack() {
 	wg.Wait()
 }
 
+//IsFinished Returns whether crawl and attack has been finished
 func (m *Manager) IsFinished() bool {
 	return m.Crawler.finished && m.Attacker.finished
 }

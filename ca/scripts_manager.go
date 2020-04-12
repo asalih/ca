@@ -9,6 +9,16 @@ import (
 	"github.com/robertkrimen/otto/parser"
 )
 
+//ScriptTemplate base script of the context
+var ScriptTemplate string = `
+	var severities = ["Best Practice", "Information", "Low", "Medium", "High", "Critical"]
+	var BEST_PRACTICE = 0, INFORMATION = 1, LOW = 2, MEDIUM = 3, HIGH = 4, CRITICAL = 5;
+
+	function Found(severity, title, additionalData){
+		return {Title: title, Severity: severities[severity], AdditionalData: additionalData}
+	}
+`
+
 //ScriptsManager Scripts file manager
 type ScriptsManager struct {
 	RootDir       string

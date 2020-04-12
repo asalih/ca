@@ -1,3 +1,10 @@
+var requests = [
+  {
+    url: '/robots.txt',
+    method: 'GET'
+  }
+];
+
 
 function analyze(response) {
 

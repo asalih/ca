@@ -5,12 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/robertkrimen/otto"
 	"github.com/robertkrimen/otto/ast"
 )
 
+//Attacker Attacker model
 type Attacker struct {
-	Reader               func() *CrawlData
+	CrawlDataReader      func() *crawlData
 	ScriptsManager       *ScriptsManager
 	finished             bool
 	ticker               *time.Ticker
@@ -19,92 +19,56 @@ type Attacker struct {
 	FoundVulnerabilities []*Vulnerability
 }
 
-var template string = `
-	var severities = ["Best Practice", "Information", "Low", "Medium", "High", "Critical"]
-	var BEST_PRACTICE = 0, INFORMATION = 1, LOW = 2, MEDIUM = 3, HIGH = 4, CRITICAL = 5;
-
-	function Found(severity, title, additionalData){
-		return {Title: title, Severity: severities[severity], AdditionalData: additionalData}
-	}
-`
-
+//NewAttacker Attacker initiator
 func NewAttacker(scriptsManager *ScriptsManager) *Attacker {
 	return &Attacker{nil, scriptsManager, false, nil, nil, nil, nil}
 }
 
 func (attacker *Attacker) attack() {
-	if attacker.Reader == nil {
+	if attacker.CrawlDataReader == nil {
 		return
 	}
 
-	crawlData := attacker.Reader()
+	cData := attacker.CrawlDataReader()
 
-	if crawlData == nil {
+	if cData == nil {
 		return
 	}
 
 	//loop
 	defer attacker.attack()
 
-	fmt.Println("Attacking " + crawlData.URL.RequestURI())
+	fmt.Println("Attacking " + cData.URL.RequestURI())
 
 	var wg sync.WaitGroup
 	wg.Add(len(attacker.ScriptsManager.ActiveScripts))
 
 	for _, p := range attacker.ScriptsManager.ActiveScripts {
-		go func(scr *ast.Program, crwl *CrawlData, wg *sync.WaitGroup) {
+		go func(scr *ast.Program) {
 			defer wg.Done()
-			vm := otto.New()
 
-			vm.Run(template)
-			vm.Run(scr)
-
-			attacks, _ := vm.Get("attacks")
-
-			attackHandler := func(attackStr string) {
-				handler := &httpRequestHandler{crwl, attackStr}
-				response := handler.Do()
-
-				method, _ := vm.Get("analyze")
-				analyzer, anerr := method.Call(method, response)
-
-				if anerr != nil {
-					fmt.Println(anerr)
-				}
-
-				analyzeResult, _ := analyzer.Export()
-
-				if analyzeResult == nil {
-					return
-				}
-
-				vulnerabilityData := NewVulnerability(analyzeResult.(map[string]interface{}), crawlData)
-
-				if vulnerabilityData == nil {
-					return
-				}
-
-				attacker.FoundVulnerabilities = append(attacker.FoundVulnerabilities, vulnerabilityData)
+			result := executeAttackScript(scr, cData)
+			if result == nil {
+				return
 			}
 
-			attacksList, _ := attacks.Export()
-
-			if attacksList == nil {
-				attackHandler("")
-			} else {
-				attacksListArray := attacksList.([]map[string]interface{})
-				for _, aObj := range attacksListArray {
-					attackStr := aObj["attack"].(string)
-					attackHandler(attackStr)
-				}
-			}
-
-		}(p, crawlData, &wg)
+			attacker.FoundVulnerabilities = append(attacker.FoundVulnerabilities, result...)
+		}(p)
 	}
 
 	wg.Wait()
+
+	if cData.Script != nil {
+		result := executeAttackScript(cData.Script, cData)
+		if result == nil {
+			return
+		}
+
+		attacker.FoundVulnerabilities = append(attacker.FoundVulnerabilities, result...)
+	}
 }
 
+//Start Starts attacking phase
 func (attacker *Attacker) Start(wg *sync.WaitGroup) {
 	attacker.ticker = time.NewTicker(500 * time.Millisecond)
 	attacker.tickerChannel = make(chan bool)
@@ -122,6 +86,7 @@ func (attacker *Attacker) Start(wg *sync.WaitGroup) {
 	}()
 }
 
+//Finalize Cleanup func for attacking phase
 func (attacker *Attacker) Finalize() {
 	attacker.tickerChannel <- true
 	attacker.ticker.Stop()

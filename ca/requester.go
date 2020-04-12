@@ -8,7 +8,7 @@ import (
 )
 
 type httpRequestHandler struct {
-	crawlData *CrawlData
+	crawlData *crawlData
 	attack    string
 }
 
